@@ -6,23 +6,28 @@ import (
 )
 
 func TestNextToken(t *testing.T) {
-	input := `let five = 5;
-	let ten = 10;
+	input := `propose five = 5;
+	propose ten = 10;
 
-	let add = fn(x,y){
+    ++a;
+    a++;
+    --a;
+    a--;
+
+	propose add = func(x,y){
 	x + y;
 	};
 
-	let result = add(five, ten);
+	propose result = add(five, ten);
 	!/*5;
 	5 < 10 > 5; 
 
-	if (a) {
-		return true;
-	} elif (b) {
-		return false; 
-	} else {
-		return ten; 
+	perhaps (a) {
+		sayless true;
+	} perchance (b) {
+		sayless false; 
+	} otherwise {
+		sayless ten; 
 	}
 	5 == 5;
 	5 != 6;
@@ -31,20 +36,32 @@ func TestNextToken(t *testing.T) {
 		expectedType    token.TokenType
 		expectedLiteral string
 	}{
-		{token.LET, "let"},
+		{token.LET, "propose"},
 		{token.IDENT, "five"},
 		{token.ASSIGN, "="},
 		{token.INT, "5"},
 		{token.SEMICOLON, ";"},
-		{token.LET, "let"},
+		{token.LET, "propose"},
 		{token.IDENT, "ten"},
 		{token.ASSIGN, "="},
 		{token.INT, "10"},
 		{token.SEMICOLON, ";"},
-		{token.LET, "let"},
+		{token.INCREMENT, "++"},
+		{token.IDENT, "a"},
+		{token.SEMICOLON, ";"},
+		{token.IDENT, "a"},
+		{token.INCREMENT, "++"},
+		{token.SEMICOLON, ";"},
+		{token.DECREMENT, "--"},
+		{token.IDENT, "a"},
+		{token.SEMICOLON, ";"},
+		{token.IDENT, "a"},
+		{token.DECREMENT, "--"},
+		{token.SEMICOLON, ";"},
+		{token.LET, "propose"},
 		{token.IDENT, "add"},
 		{token.ASSIGN, "="},
-		{token.FUNCTION, "fn"},
+		{token.FUNCTION, "func"},
 		{token.LPAREN, "("},
 		{token.IDENT, "x"},
 		{token.COMMA, ","},
@@ -57,7 +74,7 @@ func TestNextToken(t *testing.T) {
 		{token.SEMICOLON, ";"},
 		{token.RBRACE, "}"},
 		{token.SEMICOLON, ";"},
-		{token.LET, "let"},
+		{token.LET, "propose"},
 		{token.IDENT, "result"},
 		{token.ASSIGN, "="},
 		{token.IDENT, "add"},
@@ -78,27 +95,27 @@ func TestNextToken(t *testing.T) {
 		{token.GT, ">"},
 		{token.INT, "5"},
 		{token.SEMICOLON, ";"},
-		{token.IF, "if"},
+		{token.IF, "perhaps"},
 		{token.LPAREN, "("},
 		{token.IDENT, "a"},
 		{token.RPAREN, ")"},
 		{token.LBRACE, "{"},
-		{token.RETURN, "return"},
+		{token.RETURN, "sayless"},
 		{token.TRUE, "true"},
 		{token.SEMICOLON, ";"},
 		{token.RBRACE, "}"},
-		{token.ELIF, "elif"},
+		{token.ELIF, "perchance"},
 		{token.LPAREN, "("},
 		{token.IDENT, "b"},
 		{token.RPAREN, ")"},
 		{token.LBRACE, "{"},
-		{token.RETURN, "return"},
+		{token.RETURN, "sayless"},
 		{token.FALSE, "false"},
 		{token.SEMICOLON, ";"},
 		{token.RBRACE, "}"},
-		{token.ELSE, "else"},
+		{token.ELSE, "otherwise"},
 		{token.LBRACE, "{"},
-		{token.RETURN, "return"},
+		{token.RETURN, "sayless"},
 		{token.IDENT, "ten"},
 		{token.SEMICOLON, ";"},
 		{token.RBRACE, "}"},

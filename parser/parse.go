@@ -20,18 +20,20 @@ const (
 )
 
 var precedence = map[token.TokenType]int{
-	token.EQ:       EQUALS,
-	token.NEQ:      EQUALS,
-	token.PLUS:     SUM,
-	token.MINUS:    SUM,
-	token.ASTERISK: PRODUCT,
-	token.DASH:     PRODUCT,
-	token.LT:       LESSGREATER,
-	token.GT:       LESSGREATER,
-	token.TERNARY:  LESSGREATER,
-	token.LPAREN:   CALL,
-	token.POWER:    PRODUCT,
-	token.MOD:      PRODUCT,
+	token.EQ:        EQUALS,
+	token.NEQ:       EQUALS,
+	token.PLUS:      SUM,
+	token.MINUS:     SUM,
+	token.ASTERISK:  PRODUCT,
+	token.DASH:      PRODUCT,
+	token.LT:        LESSGREATER,
+	token.GT:        LESSGREATER,
+	token.TERNARY:   LESSGREATER,
+	token.LPAREN:    CALL,
+	token.POWER:     PRODUCT,
+	token.MOD:       PRODUCT,
+	token.DECREMENT: SUM,
+	token.INCREMENT: SUM,
 }
 
 type Parser struct {
@@ -41,13 +43,15 @@ type Parser struct {
 	peekToken token.Token
 	errors    []string
 
-	prefixParseFns map[token.TokenType]prefixParseFn
-	infixPerseFns  map[token.TokenType]infixParseFn
+	prefixParseFns  map[token.TokenType]prefixParseFn
+	infixPerseFns   map[token.TokenType]infixParseFn
+	postfixParseFns map[token.TokenType]postfixParseFn
 }
 
 type (
-	prefixParseFn func() ast.Expression
-	infixParseFn  func(ast.Expression) ast.Expression
+	prefixParseFn  func() ast.Expression
+	infixParseFn   func(ast.Expression) ast.Expression
+	postfixParseFn func(ast.Expression) ast.Expression
 )
 
 func New(l *lexer.Lexer) *Parser {
@@ -67,6 +71,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.LPAREN, p.parseGroupedExpression)
 	p.registerPrefix(token.IF, p.parseIfExpression)
 	p.registerPrefix(token.FUNCTION, p.parseFunctionLiteral)
+	p.registerPrefix(token.DECREMENT, p.parsePrefixExpression)
+	p.registerPrefix(token.INCREMENT, p.parsePrefixExpression)
 
 	p.infixPerseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
@@ -82,6 +88,10 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.TERNARY, p.parseTernaryExpression)
 	p.registerInfix(token.COLON, p.parseTernaryExpression)
 	p.registerInfix(token.LPAREN, p.parseCallExpression)
+
+	p.postfixParseFns = make(map[token.TokenType]postfixParseFn)
+	p.registerPostfix(token.INCREMENT, p.parsePostfixExpression)
+	p.registerPostfix(token.DECREMENT, p.parsePostfixExpression)
 
 	p.nextToken()
 	p.nextToken()
@@ -247,6 +257,10 @@ func (p *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
 	p.infixPerseFns[tokenType] = fn
 }
 
+func (p *Parser) registerPostfix(tokenType token.TokenType, fn postfixParseFn) {
+	p.postfixParseFns[tokenType] = fn
+}
+
 func (p *Parser) parseExpressionstatement() *ast.ExpressionStatement {
 	stmt := &ast.ExpressionStatement{Token: p.curToken}
 
@@ -267,6 +281,12 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 		return nil
 	}
 	leftExp := prefix()
+
+	if p.peekTokenIs(token.INCREMENT) || p.peekTokenIs(token.DECREMENT) {
+		p.nextToken()
+		postfix := p.postfixParseFns[p.curToken.Type]
+		leftExp = postfix(leftExp)
+	}
 
 	for !p.peekTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() {
 		infix := p.infixPerseFns[p.peekToken.Type]
@@ -347,6 +367,15 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	precedence := p.curPrecedence()
 	p.nextToken()
 	expression.Right = p.parseExpression(precedence)
+	return expression
+}
+
+func (p *Parser) parsePostfixExpression(left ast.Expression) ast.Expression {
+	expression := &ast.PostfixExpression{
+		Token:    p.curToken,
+		Left:     left,
+		Operator: p.curToken.Literal,
+	}
 	return expression
 }
 

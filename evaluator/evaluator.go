@@ -33,6 +33,9 @@ func Eval(node ast.Node) object.Object {
 		left := Eval(node.Left)
 		right := Eval(node.Right)
 		return intOrfloat(left, node.Operator, right)
+	case *ast.PostfixExpression:
+		left := Eval(node.Left)
+		return evalPrefixExpression(node.Operator, left)
 	}
 	return nil
 }
@@ -58,6 +61,10 @@ func evalPrefixExpression(operator string, right object.Object) object.Object {
 		return evalBangOperatorExpression(right)
 	case "-":
 		return evalNegativeOperatorExpression(right)
+	case "++":
+		return evalIncrementOperatorExpression(right)
+	case "--":
+		return evalDecrementOperatorExpression(right)
 	default:
 		return NULL
 	}
@@ -77,12 +84,14 @@ func evalBangOperatorExpression(obj object.Object) object.Object {
 }
 
 func evalNegativeOperatorExpression(obj object.Object) object.Object {
-	if obj.Type() != object.INTEGER_OBJ {
-		return NULL
+	if obj.Type() == object.INTEGER_OBJ {
+		val := obj.(*object.Integer).Value
+		return &object.Integer{Value: -val}
+	} else if obj.Type() == object.FLOAT_OBJ {
+		val := obj.(*object.Float).Value
+		return &object.Float{Value: -val}
 	}
-
-	value := obj.(*object.Integer).Value
-	return &object.Integer{Value: -value}
+	return NULL
 }
 
 func evalInfixIntExpression(left object.Object, operator string, right object.Object) object.Object {
@@ -176,4 +185,26 @@ func intOrfloat(left object.Object, operator string, right object.Object) object
 		return evalInfixFloatExpression(lef, operator, right)
 	}
 	return evalInfixIntExpression(left, operator, r)
+}
+
+func evalIncrementOperatorExpression(obj object.Object) object.Object {
+	if obj.Type() == object.INTEGER_OBJ {
+		val := obj.(*object.Integer).Value
+		return &object.Integer{Value: val + 1}
+	} else if obj.Type() == object.FLOAT_OBJ {
+		val := obj.(*object.Float).Value
+		return &object.Float{Value: val + 1.0}
+	}
+	return NULL
+}
+
+func evalDecrementOperatorExpression(obj object.Object) object.Object {
+	if obj.Type() == object.INTEGER_OBJ {
+		val := obj.(*object.Integer).Value
+		return &object.Integer{Value: val - 1}
+	} else if obj.Type() == object.FLOAT_OBJ {
+		val := obj.(*object.Float).Value
+		return &object.Float{Value: val - 1.0}
+	}
+	return NULL
 }

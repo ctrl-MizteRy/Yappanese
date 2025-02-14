@@ -42,7 +42,23 @@ func (l *Lexer) NextToken() token.Token {
 	case ';':
 		tok = newToken(token.SEMICOLON, l.ch)
 	case '-':
-		tok = newToken(token.MINUS, l.ch)
+		if l.nextChar() == '-' {
+			a := Lexer{input: l.input, position: l.position, readPosition: l.readPosition, ch: l.ch}
+			a.readChar()
+			if a.nextChar() != '-' {
+				a.skipWhiteSpace()
+				if isDigital(a.nextChar()) || isLetter(a.nextChar()) || a.nextChar() == ';' {
+					char := l.ch
+					l.readChar()
+					lit := string(char) + string(l.ch)
+					tok = token.Token{Type: token.DECREMENT, Literal: lit}
+				} else {
+					tok = newToken(token.ILLEGAL, l.ch)
+				}
+			}
+		} else {
+			tok = newToken(token.MINUS, l.ch)
+		}
 	case '(':
 		tok = newToken(token.LPAREN, l.ch)
 	case ')':
@@ -54,7 +70,23 @@ func (l *Lexer) NextToken() token.Token {
 	case ',':
 		tok = newToken(token.COMMA, l.ch)
 	case '+':
-		tok = newToken(token.PLUS, l.ch)
+		if l.nextChar() == '+' {
+			a := Lexer{input: l.input, position: l.position, readPosition: l.readPosition, ch: l.ch}
+			a.readChar()
+			if a.nextChar() != '+' {
+				a.skipWhiteSpace()
+				if isDigital(a.nextChar()) || isLetter(a.nextChar()) || a.nextChar() == ';' {
+					char := l.ch
+					l.readChar()
+					lit := string(char) + string(l.ch)
+					tok = token.Token{Type: token.INCREMENT, Literal: lit}
+				} else {
+					tok = newToken(token.ILLEGAL, l.ch)
+				}
+			}
+		} else {
+			tok = newToken(token.PLUS, l.ch)
+		}
 	case '>':
 		tok = newToken(token.GT, l.ch)
 	case '<':
@@ -161,4 +193,12 @@ func (l *Lexer) readNumber() token.Token {
 
 func isDigital(ch byte) bool {
 	return '0' <= ch && ch <= '9'
+}
+
+func (l *Lexer) nextTwoChar() byte {
+	if l.readPosition+1 >= len(l.input) {
+		return 0
+	} else {
+		return l.input[l.readPosition+1]
+	}
 }

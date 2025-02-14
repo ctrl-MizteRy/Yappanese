@@ -110,6 +110,47 @@ func TestPrefixExpression(t *testing.T) {
 	}
 }
 
+func TestParsingPostfixExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		left     interface{}
+		operator string
+	}{
+		{"5++;", 5, "++"},
+		{"5--;", 5, "--"},
+	}
+
+	for _, test := range tests {
+		l := lexer.New(test.input)
+		p := New(l)
+		program := p.ParserProgram()
+		checkParserError(t, p)
+
+		if len(program.Statements) != 1 {
+			t.Fatalf("Statement length error: expect=1, got=%d", len(program.Statements))
+		}
+
+		stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+		if !ok {
+			t.Fatalf("Expression error: expect= *ast.ExpressionStatement, got=%T", program.Statements[0])
+		}
+
+		exp, ok := stmt.Expression.(*ast.PostfixExpression)
+		if !ok {
+			t.Fatalf("Expression Error: expect= *ast.PostfixExpression, got=%T", stmt.Expression)
+		}
+
+		if !testLiteralExpression(t, exp.Left, test.left) {
+			return
+		}
+
+		if test.operator != exp.Operator {
+			t.Fatalf("Mistaching operator: expect=%s, got=%s", test.operator, exp.Operator)
+		}
+
+	}
+}
+
 func TestParsingInfixExpression(t *testing.T) {
 	infixTests := []struct {
 		input    string

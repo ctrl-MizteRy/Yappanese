@@ -71,6 +71,28 @@ func (i *InfixExpression) String() string {
 	return msg.String()
 }
 
+type PostfixExpression struct {
+	Token    token.Token
+	Left     Expression
+	Operator string
+}
+
+func (p *PostfixExpression) expressionNode() {}
+func (p *PostfixExpression) TokenLiteral() string {
+	return p.Token.Literal
+}
+
+func (p *PostfixExpression) String() string {
+	var msg bytes.Buffer
+	msg.WriteString("(")
+	msg.WriteString(p.Left.String())
+	msg.WriteString(" " + p.Operator + " ")
+	msg.WriteString(p.Operator)
+	msg.WriteString(")")
+
+	return msg.String()
+}
+
 func (p *Program) TokenLiteral() string {
 	if len(p.Statements) > 0 {
 		return p.Statements[0].TokenLiteral()
