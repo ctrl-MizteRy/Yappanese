@@ -2,6 +2,7 @@ package evaluator
 
 import (
 	"log"
+	"math"
 	"yap/ast"
 	"yap/object"
 )
@@ -112,20 +113,8 @@ func evalInfixIntExpression(left object.Object, operator string, right object.Ob
 		}
 		return &object.Float{Value: float64(l_val) / float64(r_val)}
 	case "**":
-		if r_val >= 0 {
-			var value int64 = 1
-			for i := 0; i < int(r_val); i++ {
-				value *= l_val
-			}
-			return &object.Integer{Value: value}
-		} else {
-			var value float64 = 1.0
-			step := -1 * int(r_val)
-			for i := 0; i < step; i++ {
-				value /= float64(l_val)
-			}
-			return &object.Float{Value: value}
-		}
+		val := math.Pow(float64(l_val), float64(r_val))
+		return &object.Float{Value: val}
 	default:
 		return NULL
 	}
@@ -149,19 +138,8 @@ func evalInfixFloatExpression(left object.Object, operator string, right object.
 		}
 		return &object.Float{Value: float64(l_val / r_val)}
 	case "**":
-		var value float64 = 1
-		if r_val >= 0 {
-			for i := 0; i < int(r_val); i++ {
-				value *= l_val
-			}
-			return &object.Float{Value: value}
-		} else {
-			step := -1 * int(r_val)
-			for i := 0; i < step; i++ {
-				value /= float64(l_val)
-			}
-			return &object.Float{Value: value}
-		}
+		val := math.Pow(l_val, r_val)
+		return &object.Float{Value: val}
 	default:
 		return NULL
 	}
