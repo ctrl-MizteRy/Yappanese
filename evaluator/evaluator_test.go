@@ -138,6 +138,24 @@ func TestTernaryExpression(t *testing.T) {
 	}
 }
 
+func TestReturnStatments(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"sayless 10;", 10},
+		{"sayless 10; 9;", 10},
+		{"sayless 2 * 4;", 8},
+		{"10; sayless 2 * 5 + 9; 8;", 19},
+		{"perhaps (10 > 1) {perhaps (10 > 1) { sayless 10; } sayless 1;}", 10},
+	}
+
+	for _, test := range tests {
+		eval := testEval(test.input)
+		testIntegerObject(t, eval, test.expected)
+	}
+}
+
 func testEval(input string) object.Object {
 	l := lexer.New(input)
 	p := parser.New(l)

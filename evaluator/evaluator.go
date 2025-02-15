@@ -16,11 +16,9 @@ var (
 func Eval(node ast.Node) object.Object {
 	switch node := node.(type) {
 	case *ast.Program:
-		return evalStatements(node.Statements)
-
+		return evalProgram(node)
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression)
-
 	case *ast.IntegerLiteral:
 		return &object.Integer{Value: node.Value}
 	case *ast.FloatLiteral:
@@ -38,11 +36,14 @@ func Eval(node ast.Node) object.Object {
 		left := Eval(node.Left)
 		return evalPrefixExpression(node.Operator, left)
 	case *ast.BlockStatement:
-		return evalStatements(node.Statements)
+		return evalBlockStatement(node)
 	case *ast.IfExpression:
 		return evalIfExpression(node)
 	case *ast.TernaryExpression:
 		return evalTernaryExpression(node)
+	case *ast.ReturnStatement:
+		val := Eval(node.ReturnValue)
+		return &object.ReturnValue{Value: val}
 	}
 	return nil
 }
@@ -51,6 +52,10 @@ func evalStatements(stmts []ast.Statement) object.Object {
 	var result object.Object
 	for _, statement := range stmts {
 		result = Eval(statement)
+
+		if returnVal, ok := result.(*object.ReturnValue); ok {
+			return returnVal.Value
+		}
 	}
 	return result
 }
@@ -254,4 +259,30 @@ func isTrue(obj object.Object) bool {
 	default:
 		return true
 	}
+}
+
+func evalProgram(obj *ast.Program) object.Object {
+	var result object.Object
+
+	for _, stmt := range obj.Statements {
+		result = Eval(stmt)
+
+		if resultVal, ok := result.(*object.ReturnValue); ok {
+			return resultVal.Value
+		}
+	}
+	return result
+}
+
+func evalBlockStatement(obj *ast.BlockStatement) object.Object {
+	var result object.Object
+
+	for _, stmt := range obj.Statements {
+		result = Eval(stmt)
+
+		if result != nil && result.Type() == object.RETURN_VALUE_OBJ {
+			return result
+		}
+	}
+	return result
 }
