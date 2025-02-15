@@ -33,10 +33,16 @@ func Eval(node ast.Node) object.Object {
 	case *ast.InfixExpression:
 		left := Eval(node.Left)
 		right := Eval(node.Right)
-		return intOrfloat(left, node.Operator, right)
+		return evalInfixExpression(left, node.Operator, right)
 	case *ast.PostfixExpression:
 		left := Eval(node.Left)
 		return evalPrefixExpression(node.Operator, left)
+	case *ast.BlockStatement:
+		return evalStatements(node.Statements)
+	case *ast.IfExpression:
+		return evalIfExpression(node)
+	case *ast.TernaryExpression:
+		return evalTernaryExpression(node)
 	}
 	return nil
 }
@@ -111,10 +117,18 @@ func evalInfixIntExpression(left object.Object, operator string, right object.Ob
 		if r_val == 0 {
 			log.Fatal("ZERO DIVISION ERROR")
 		}
-		return &object.Float{Value: float64(l_val) / float64(r_val)}
+		return &object.Integer{Value: l_val / r_val}
 	case "**":
 		val := math.Pow(float64(l_val), float64(r_val))
-		return &object.Float{Value: val}
+		return &object.Integer{Value: int64(val)}
+	case "<":
+		return nativeBoolToBooleanObject(l_val < r_val)
+	case ">":
+		return nativeBoolToBooleanObject(l_val > r_val)
+	case "==":
+		return nativeBoolToBooleanObject(l_val == r_val)
+	case "!=":
+		return nativeBoolToBooleanObject(l_val != r_val)
 	default:
 		return NULL
 	}
@@ -140,29 +154,18 @@ func evalInfixFloatExpression(left object.Object, operator string, right object.
 	case "**":
 		val := math.Pow(l_val, r_val)
 		return &object.Float{Value: val}
+	case "<":
+		return nativeBoolToBooleanObject(l_val < r_val)
+	case ">":
+		return nativeBoolToBooleanObject(l_val > r_val)
+	case "==":
+		return nativeBoolToBooleanObject(l_val == r_val)
+	case "!=":
+		return nativeBoolToBooleanObject(l_val != r_val)
 	default:
 		return NULL
 	}
 
-}
-
-func intOrfloat(left object.Object, operator string, right object.Object) object.Object {
-	l, err := left.(*object.Integer)
-	if !err {
-		r, err := right.(*object.Integer)
-		if !err {
-			return evalInfixFloatExpression(left, operator, right)
-		}
-		r_float := float64(r.Value)
-		righ := &object.Float{Value: r_float}
-		return evalInfixFloatExpression(left, operator, righ)
-	}
-	r, err := right.(*object.Integer)
-	if !err {
-		lef := &object.Float{Value: float64(l.Value)}
-		return evalInfixFloatExpression(lef, operator, right)
-	}
-	return evalInfixIntExpression(left, operator, r)
 }
 
 func evalIncrementOperatorExpression(obj object.Object) object.Object {
@@ -185,4 +188,70 @@ func evalDecrementOperatorExpression(obj object.Object) object.Object {
 		return &object.Float{Value: val - 1.0}
 	}
 	return NULL
+}
+
+func evalInfixExpression(left object.Object, operator string, right object.Object) object.Object {
+	switch {
+	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
+		return evalInfixIntExpression(left, operator, right)
+	case left.Type() == object.INTEGER_OBJ && right.Type() == object.FLOAT_OBJ:
+		val := left.(*object.Integer).Value
+		left = &object.Float{Value: float64(val)}
+		return evalInfixFloatExpression(left, operator, right)
+	case left.Type() == object.FLOAT_OBJ && right.Type() == object.INTEGER_OBJ:
+		val := right.(*object.Integer).Value
+		right = &object.Float{Value: float64(val)}
+		return evalInfixFloatExpression(left, operator, right)
+	case left.Type() == object.FLOAT_OBJ && right.Type() == object.FLOAT_OBJ:
+		return evalInfixFloatExpression(left, operator, right)
+	case operator == "==":
+		return nativeBoolToBooleanObject(left == right)
+	case operator == "!=":
+		return nativeBoolToBooleanObject(left != right)
+	default:
+		return NULL
+	}
+}
+
+func evalIfExpression(exp *ast.IfExpression) object.Object {
+	conditions := Eval(exp.Condition)
+
+	if isTrue(conditions) {
+		return Eval(exp.Consequence)
+	} else if exp.Elif != nil {
+		condi_len := len(exp.Elif)
+		for i := 0; i < condi_len; i++ {
+			condis := Eval(exp.Elif[i].Conditions)
+			if isTrue(condis) {
+				return Eval(exp.Elif[i].Consequences)
+			}
+		}
+	}
+	if exp.Alternative != nil {
+		return Eval(exp.Alternative)
+	} else {
+		return NULL
+	}
+}
+
+func evalTernaryExpression(exp *ast.TernaryExpression) object.Object {
+	condition := Eval(exp.Condition)
+	if isTrue(condition) {
+		return Eval(exp.Consequence)
+	} else {
+		return Eval(exp.Alternative)
+	}
+}
+
+func isTrue(obj object.Object) bool {
+	switch obj {
+	case NULL:
+		return false
+	case TRUE:
+		return true
+	case FALSE:
+		return false
+	default:
+		return true
+	}
 }

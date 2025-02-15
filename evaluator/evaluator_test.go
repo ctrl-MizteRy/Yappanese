@@ -44,6 +44,23 @@ func TestEvalBooleanExpression(t *testing.T) {
 	}{
 		{"true", true},
 		{"false", false},
+		{"1 < 2", true},
+		{"1 > 2", false},
+		{"1 < 1", false},
+		{"1 > 1", false},
+		{"1 == 1", true},
+		{"1 != 1", false},
+		{"1 != 2", true},
+		{"1 == 2", false},
+		{"true == true", true},
+		{"true == false", false},
+		{"true != false", true},
+		{"false == false", true},
+		{"false != true", true},
+		{"(1 < 2) == true", true},
+		{"(1 < 2) == false", false},
+		{"(2 > 1) == true", true},
+		{"(2 > 1) == false", false},
 	}
 
 	for _, test := range tests {
@@ -68,6 +85,56 @@ func TestBangOperator(t *testing.T) {
 	for _, test := range tests {
 		evaluated := testEval(test.input)
 		testBooleanObject(t, evaluated, test.expeceted)
+	}
+}
+
+func TestIfElseExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{"perhaps (true) { 10 }", 10},
+		{"perhaps (false) { 10 }", nil},
+		{"perhaps (1) { 10 }", 10},
+		{"perhaps (1 < 2) {10}", 10},
+		{"perhaps (1 > 2) {10}", nil},
+		{"perhaps (1 > 2) {10} otherwise {20}", 20},
+		{"perhaps (1 < 2) {10} otherwise {20}", 10},
+		{"perhaps (1 > 2) {30} perchance ( 2 == 4) {3} perchance (2**2 == 4) {23}", 23},
+		{"perhaps (2 > 3) {3} perchance (3 < 2) {3} otherwise {4}", 4},
+	}
+
+	for _, test := range tests {
+		evaluated := testEval(test.input)
+		integer, ok := test.expected.(int)
+		if ok {
+			testIntegerObject(t, evaluated, int64(integer))
+		} else {
+			testNullObject(t, evaluated)
+		}
+	}
+}
+
+func TestTernaryExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{"(2 == 4)? 4 : 5", 5},
+		{"(true)? 25 : 4", 25},
+		{"(3 == 3) ? 5 : 1", 5},
+		{"(false) ? 7 : 3", 3},
+		{"(!false) ? 7 : 3", 7},
+	}
+
+	for _, test := range tests {
+		eval := testEval(test.input)
+		integer, ok := test.expected.(int)
+		if ok {
+			testIntegerObject(t, eval, int64(integer))
+		} else {
+			testNullObject(t, eval)
+		}
 	}
 }
 
@@ -103,6 +170,13 @@ func testBooleanObject(t *testing.T, obj object.Object, expected bool) bool {
 
 	if result.Value != expected {
 		t.Errorf("Value error: expect=%t, got=%t", expected, result.Value)
+		return false
+	}
+	return true
+}
+func testNullObject(t *testing.T, obj object.Object) bool {
+	if obj != NULL {
+		t.Errorf("object is not NULL, got=%T", obj)
 		return false
 	}
 	return true

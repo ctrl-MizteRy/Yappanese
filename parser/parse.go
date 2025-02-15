@@ -473,6 +473,8 @@ func (p *Parser) parseElifExpression() []ast.ElifEpxression {
 		if p.peekTokenIs(token.ELIF) {
 			p.nextToken()
 			p.nextToken()
+		} else {
+			break
 		}
 	}
 	return expression
