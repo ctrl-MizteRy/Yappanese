@@ -189,6 +189,10 @@ func TestErrorHandling(t *testing.T) {
 			"perhaps (10 > 1) { perhaps (10 > 1) { sayless true + false;} sayless 1;}",
 			"unknown operator: BOOLEAN + BOOLEAN",
 		},
+		{
+			"foobar",
+			"identifier not found: foobar",
+		},
 	}
 
 	for _, test := range tests {
@@ -207,12 +211,29 @@ func TestErrorHandling(t *testing.T) {
 	}
 }
 
+func TestSayStatement(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"propose a = 5; a;", 5},
+		{"propose a = 5 * 5; a;", 25},
+		{"propose a = 5; propose b = a; b;", 5},
+		{"propose a =5; propose b = a; propose c = a + b +5; c;", 15},
+	}
+
+	for _, test := range tests {
+		testIntegerObject(t, testEval(test.input), test.expected)
+	}
+}
+
 func testEval(input string) object.Object {
 	l := lexer.New(input)
 	p := parser.New(l)
 	program := p.ParserProgram()
+	env := object.NewEnviroment()
 
-	return Eval(program)
+	return Eval(program, env)
 }
 
 func testIntegerObject(t *testing.T, obj object.Object, expected int64) bool {
