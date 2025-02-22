@@ -44,6 +44,7 @@ func TestSayStatment(t *testing.T) {
 		expectedIndentifier string
 		expectedValue       interface{}
 	}{
+		{"propose a = 4;", "a", 4},
 		{"propose a = 5.5;", "a", 5.5},
 		{"propose x = 5;", "x", 5},
 		{"propose y = true;", "y", true},
@@ -300,6 +301,14 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 		{
 			"add(a + b + c * d / f + g)",
 			"add((((a + b) + ((c * d) / f)) + g))",
+		},
+		{
+			"a * [1, 2, 3, 4][b * c] * d",
+			"((a * ([1, 2, 3, 4][(b * c)])) * d)",
+		},
+		{
+			"add(a * b[2], b[1], 2 * [1, 2][1])",
+			"add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
 		},
 	}
 
@@ -699,6 +708,54 @@ func TestCallExpression(t *testing.T) {
 	testLiteralExpression(t, exp.Arguments[0], 1)
 	testInfixExpression(t, exp.Arguments[1], 2, "+", 3)
 	testInfixExpression(t, exp.Arguments[2], 4, "*", 5)
+}
+
+func TestArrayLiteral(t *testing.T) {
+	inputs := [...]string{
+		"propose a = [1, 2, 3, 5];",
+		"propose a = [false, true, true];",
+		"propose a = [\"true\", \"hello\", \"there\"];",
+		"propose a = [[], [], []];",
+	}
+
+	for _, input := range inputs {
+		t.Log(input)
+		l := lexer.New(input)
+		p := New(l)
+		program := p.ParserProgram()
+		checkParserError(t, p)
+
+		if len(program.Statements) != 1 {
+			t.Fatalf("Unexpected length: expect=1, got=%d", len(program.Statements))
+		}
+	}
+}
+
+func TestParsingIndexExpressions(t *testing.T) {
+	input := "arr[1+2];"
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParserProgram()
+	checkParserError(t, p)
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("Expression error: expect=ast.Expression, got=%T", program.Statements[0])
+	}
+
+	exp, ok := stmt.Expression.(*ast.IndexExpression)
+	if !ok {
+		t.Fatalf("Expression error: expect=ast.IndexExpression, got=%T", stmt.Expression)
+	}
+
+	if !testIdentifer(t, exp.Left, "arr") {
+		return
+	}
+
+	if !testInfixExpression(t, exp.Index, 1, "+", 2) {
+		return
+	}
 }
 
 func checkParserError(t *testing.T, p *Parser) {

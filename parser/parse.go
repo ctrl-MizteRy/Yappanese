@@ -17,6 +17,7 @@ const (
 	PRODUCT
 	PREFIX
 	CALL
+	INDEX
 )
 
 var precedence = map[token.TokenType]int{
@@ -34,6 +35,7 @@ var precedence = map[token.TokenType]int{
 	token.MOD:       PRODUCT,
 	token.DECREMENT: SUM,
 	token.INCREMENT: SUM,
+	token.LBRACKET:  INDEX,
 }
 
 type Parser struct {
@@ -73,6 +75,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.FUNCTION, p.parseFunctionLiteral)
 	p.registerPrefix(token.DECREMENT, p.parsePrefixExpression)
 	p.registerPrefix(token.INCREMENT, p.parsePrefixExpression)
+	p.registerPrefix(token.STRING, p.parseStringLiteral)
+	p.registerPrefix(token.LBRACKET, p.parseArrayLiteral)
 
 	p.infixPerseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
@@ -88,6 +92,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.TERNARY, p.parseTernaryExpression)
 	p.registerInfix(token.COLON, p.parseTernaryExpression)
 	p.registerInfix(token.LPAREN, p.parseCallExpression)
+	p.registerInfix(token.LBRACKET, p.parseIndexExpression)
 
 	p.postfixParseFns = make(map[token.TokenType]postfixParseFn)
 	p.registerPostfix(token.INCREMENT, p.parsePostfixExpression)
@@ -133,15 +138,17 @@ func (p *Parser) ParserProgram() *ast.Program {
 }
 
 func (p *Parser) parseStatement() ast.Statement {
-	switch p.curToken.Type {
-	case token.LET:
+	switch {
+	case p.curToken.Type == token.LET:
 		return p.parseLetStatement()
-	case token.GLOBAL:
+	case p.curToken.Type == token.GLOBAL:
 		return p.parseGlobalStatement()
-	case token.CONST:
+	case p.curToken.Type == token.CONST:
 		return p.parseConstStatement()
-	case token.RETURN:
+	case p.curToken.Type == token.RETURN:
 		return p.parseReturnStatement()
+	case p.curToken.Type == token.IDENT && p.peekTokenIs(token.ASSIGN):
+		return p.parseIdentStatement()
 	default:
 		return p.parseExpressionstatement()
 	}
@@ -155,6 +162,13 @@ func (p *Parser) parseLetStatement() *ast.SayStatement {
 	}
 	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 	// The current token.Type is actually IDENT here since the expectPeek moved the token up one
+
+	//Make it so that you can create a null variable for now and use it later
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+		stmt.Value = nil
+		return stmt
+	}
 
 	if !p.expectPeek(token.ASSIGN) {
 		return nil
@@ -517,6 +531,11 @@ func (p *Parser) parseTernaryBlockStatement(ternary *ast.TernaryExpression) {
 func (p *Parser) parseFunctionLiteral() ast.Expression {
 	literal := &ast.FunctionExpression{Token: p.curToken}
 
+	if p.peekTokenIs(token.IDENT) {
+		p.nextToken()
+		literal.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	}
+
 	if !p.expectPeek(token.LPAREN) {
 		return nil
 	}
@@ -586,4 +605,129 @@ func (p *Parser) parseCallArgument() []ast.Expression {
 	}
 
 	return args
+}
+
+func (p *Parser) parseIdentStatement() *ast.PotentialStatement {
+	stmt := &ast.PotentialStatement{Token: token.Token{Type: token.LET, Literal: "propose"}}
+	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	p.nextToken()
+	p.nextToken()
+	stmt.Value = p.parseExpression(LOWEST)
+
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+	return stmt
+}
+
+func (p *Parser) parseStringLiteral() ast.Expression {
+	return &ast.StringLiteral{Token: p.curToken, Literal: p.curToken.Literal}
+}
+
+func (p *Parser) parseArrayLiteral() ast.Expression {
+	array := &ast.ArrayLiteral{Token: p.curToken}
+
+	array.Elements = p.parseExpressionList(token.RBRACKET)
+
+	if array.Elements == nil {
+		return nil
+	}
+	return array
+}
+
+func (p *Parser) parseExpressionList(end token.TokenType) []ast.Expression {
+	list := []ast.Expression{}
+
+	if p.peekTokenIs(end) {
+		p.nextToken()
+		return list
+	}
+
+	p.nextToken()
+	list = append(list, p.parseExpression(LOWEST))
+
+	defaultTok := getCurToken(list[0])
+
+	for p.peekTokenIs(token.COMMA) {
+		p.nextToken()
+		p.nextToken()
+
+		curExp := p.parseExpression(LOWEST)
+		curTok := getCurToken(curExp)
+		if defaultTok == curTok || curTok == token.LBRACKET {
+			list = append(list, curExp)
+		} else {
+			msg := fmt.Sprintf("Mismatching variable type, expect=%s, got=%s",
+				defaultTok, curTok)
+			p.errors = append(p.errors, msg)
+			return nil
+		}
+	}
+
+	if !p.expectPeek(end) {
+		return nil
+	}
+	/*
+		if !p.peekTokenIs(token.SEMICOLON) || !p.peekTokenIs(token.COMMA) {
+			for !p.curTokenIs(token.EOF) {
+				p.nextToken()
+			}
+			return nil
+		}
+	*/
+	return list
+}
+
+func getCurToken(exp ast.Expression) token.TokenType {
+	switch tok := exp.(type) {
+	case *ast.IntegerLiteral:
+		return token.INT
+	case *ast.FloatLiteral:
+		return token.FLOAT
+	case *ast.StringLiteral:
+		return token.STRING
+	case *ast.ArrayLiteral:
+		if len(tok.Elements) != 0 {
+			return getCurToken(tok.Elements[0])
+		} else {
+			return token.LBRACKET
+		}
+	case *ast.Identifier:
+		return identifyToken(tok)
+	case *ast.Boolean:
+		return token.TRUE
+	default:
+		return token.ILLEGAL
+	}
+}
+
+func identifyToken(exp *ast.Identifier) token.TokenType {
+	val := exp.Value
+
+	if _, err := strconv.Atoi(val); err == nil {
+		return token.INT
+	}
+
+	if _, err := strconv.ParseFloat(val, 64); err == nil {
+		return token.FLOAT
+	}
+
+	if _, err := strconv.ParseBool(val); err == nil {
+		return token.TRUE //it doesn't matter if it's true or false since it's only for checking
+	}
+
+	return token.STRING
+}
+
+func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
+	exp := &ast.IndexExpression{Token: p.curToken, Left: left}
+
+	p.nextToken()
+	exp.Index = p.parseExpression(LOWEST)
+
+	if !p.expectPeek(token.RBRACKET) {
+		return nil
+	}
+
+	return exp
 }

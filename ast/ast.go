@@ -158,6 +158,29 @@ func (s *SayStatement) String() string {
 	return out.String()
 }
 
+type PotentialStatement struct {
+	Token token.Token
+	Name  *Identifier
+	Value Expression
+}
+
+func (p *PotentialStatement) statementNode() {}
+func (p *PotentialStatement) TokenLiteral() string {
+	return p.Token.Literal
+}
+
+func (p *PotentialStatement) String() string {
+	var msg bytes.Buffer
+
+	msg.WriteString(p.TokenLiteral() + " ")
+	msg.WriteString(p.Name.String())
+	msg.WriteString(" = ")
+	msg.WriteString(p.Value.String())
+	msg.WriteString(";")
+
+	return msg.String()
+}
+
 type ConstStaement struct {
 	Token token.Token
 	Name  *Identifier
@@ -366,6 +389,7 @@ func (b *BlockStatement) String() string {
 
 type FunctionExpression struct {
 	Token      token.Token
+	Name       *Identifier
 	Parameters []*Identifier
 	Body       *BlockStatement
 }
@@ -415,6 +439,67 @@ func (c *CallExpression) String() string {
 	msg.WriteString("(")
 	msg.WriteString(strings.Join(args, ", "))
 	msg.WriteString(")")
+
+	return msg.String()
+}
+
+type StringLiteral struct {
+	Token   token.Token
+	Literal string
+}
+
+func (s *StringLiteral) expressionNode() {}
+func (s *StringLiteral) TokenLiteral() string {
+	return s.Token.Literal
+}
+
+func (s *StringLiteral) String() string {
+	return s.Literal
+}
+
+type ArrayLiteral struct {
+	Token    token.Token
+	Elements []Expression
+}
+
+func (a *ArrayLiteral) expressionNode() {}
+func (a *ArrayLiteral) TokenLiteral() string {
+	return a.Token.Literal
+}
+
+func (a *ArrayLiteral) String() string {
+	var msg bytes.Buffer
+	elementMsg := []string{}
+
+	for _, e := range a.Elements {
+		elementMsg = append(elementMsg, e.String())
+	}
+	msg.WriteString("[")
+	msg.WriteString(strings.Join(elementMsg, ", "))
+	msg.WriteString("]")
+
+	return msg.String()
+}
+
+type IndexExpression struct {
+	Token token.Token
+	Left  Expression
+	Index Expression
+}
+
+func (i *IndexExpression) expressionNode() {}
+func (i *IndexExpression) TokenLiteral() string {
+	return i.Token.Literal
+}
+
+func (i *IndexExpression) String() string {
+	var msg bytes.Buffer
+
+	msg.WriteString("(")
+	msg.WriteString(i.Left.String())
+	msg.WriteString("[")
+	msg.WriteString(i.Index.String())
+	msg.WriteString("])")
 
 	return msg.String()
 }

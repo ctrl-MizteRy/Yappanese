@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strconv"
 	"yap/ast"
 	"yap/object"
 )
@@ -18,14 +19,66 @@ func Eval(node ast.Node, env *object.Enviroment) object.Object {
 	switch node := node.(type) {
 	case *ast.Program:
 		return evalProgram(node, env)
+	case *ast.FunctionExpression:
+		params := node.Parameters
+		body := node.Body
+		if node.Name != nil {
+			fu := &object.Function{Parameters: params, Env: env, Body: body}
+			env.Set(node.Name.Value, fu)
+		} else {
+			return &object.Function{Parameters: params, Env: env, Body: body}
+		}
+	case *ast.CallExpression:
+		function := Eval(node.Function, env)
+		if isError(function) {
+			return function
+		}
+
+		args := evalExpressions(node.Arguments, env)
+		if len(args) == 1 && isError(args[0]) {
+			return args[0]
+		}
+		return applyFunction(function, args)
+
 	case *ast.SayStatement:
 		val := Eval(node.Value, env)
 		if isError(val) {
 			return val
 		}
 		env.Set(node.Name.Value, val)
+	case *ast.PotentialStatement:
+		if env.Exist(node.Name.Value) {
+			val := Eval(node.Value, env)
+			if isError(val) {
+				return val
+			}
+			if !env.TypeComp(node.Name.Value, val.Type()) {
+				return newError("type mismatch error: could not set %s into '%s' variable (Type = %s)",
+					val.Type(), node.Name.String(), env.GetType(node.Name.Value).Type())
+			}
+			env.Set(node.Name.Value, val)
+		} else {
+			return newError("valariable %s does not exist, (perhaps not yet declare?)", node.Name.String())
+		}
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression, env)
+	case *ast.ArrayLiteral:
+		elements := evalExpressions(node.Elements, env)
+		if len(elements) == 1 && isError(elements[0]) {
+			return elements[0]
+		}
+		return &object.Array{Elements: elements}
+	case *ast.IndexExpression:
+		left := Eval(node.Left, env)
+		if isError(left) {
+			return left
+		}
+		index := Eval(node.Index, env)
+		if isError(index) {
+			return index
+		}
+		return evalIndexExpression(left, index)
+
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
 	case *ast.IntegerLiteral:
@@ -59,6 +112,8 @@ func Eval(node ast.Node, env *object.Enviroment) object.Object {
 		return evalIfExpression(node, env)
 	case *ast.TernaryExpression:
 		return evalTernaryExpression(node, env)
+	case *ast.StringLiteral:
+		return &object.String{Value: node.Literal}
 	case *ast.ReturnStatement:
 		val := Eval(node.ReturnValue, env)
 		if isError(val) {
@@ -80,7 +135,6 @@ func evalStatements(stmts []ast.Statement, env *object.Enviroment) object.Object
 	}
 	return result
 }
-
 func nativeBoolToBooleanObject(input bool) *object.Boolean {
 	if input {
 		return TRUE
@@ -165,7 +219,8 @@ func evalInfixIntExpression(left object.Object, operator string,
 	}
 }
 
-func evalInfixFloatExpression(left object.Object, operator string, right object.Object) object.Object {
+func evalInfixFloatExpression(left object.Object, operator string,
+	right object.Object) object.Object {
 	l_val := left.(*object.Float).Value
 	r_val := right.(*object.Float).Value
 	switch operator {
@@ -200,6 +255,38 @@ func evalInfixFloatExpression(left object.Object, operator string, right object.
 
 }
 
+func evalStringInfixExpression(left object.Object, operator string,
+	right object.Object) object.Object {
+
+	lVal := left.(*object.String).Value
+	rVal := right.(*object.String).Value
+	switch operator {
+	case "+":
+		return &object.String{Value: (lVal + rVal)}
+	case "*":
+		num, err := strconv.Atoi(lVal)
+		if err == nil {
+			str := rVal
+			for i := 0; i < num; i++ {
+				str += str
+			}
+			return &object.String{Value: str}
+		}
+		num, err = strconv.Atoi(rVal)
+		if err == nil {
+			str := lVal
+			for i := 0; i < num; i++ {
+				str += lVal
+			}
+			return &object.String{Value: str}
+		}
+		return newError("Cannot do a multiplication operator on %s and %s",
+			lVal, rVal)
+	default:
+		return newError("Operator '%s' is not supported for string operation", operator)
+	}
+}
+
 func evalIncrementOperatorExpression(obj object.Object, env *object.Enviroment, name string) object.Object {
 	if obj.Type() == object.INTEGER_OBJ {
 		val := obj.(*object.Integer).Value
@@ -229,6 +316,7 @@ func evalDecrementOperatorExpression(obj object.Object, env *object.Enviroment, 
 
 func evalInfixExpression(left object.Object, operator string,
 	right object.Object, env *object.Enviroment) object.Object {
+
 	switch {
 	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
 		return evalInfixIntExpression(left, operator, right, env)
@@ -242,6 +330,16 @@ func evalInfixExpression(left object.Object, operator string,
 		return evalInfixFloatExpression(left, operator, right)
 	case left.Type() == object.FLOAT_OBJ && right.Type() == object.FLOAT_OBJ:
 		return evalInfixFloatExpression(left, operator, right)
+	case left.Type() == object.STRING_OBJ && right.Type() == object.STRING_OBJ:
+		return evalStringInfixExpression(left, operator, right)
+	case left.Type() == object.STRING_OBJ && right.Type() == object.INTEGER_OBJ:
+		val := int(right.(*object.Integer).Value)
+		strObj := &object.String{Value: strconv.Itoa(val)}
+		return evalStringInfixExpression(left, operator, strObj)
+	case left.Type() == object.INTEGER_OBJ && right.Type() == object.STRING_OBJ:
+		val := int(left.(*object.Integer).Value)
+		strObj := &object.String{Value: strconv.Itoa(val)}
+		return evalStringInfixExpression(strObj, operator, right)
 	case operator == "==":
 		return nativeBoolToBooleanObject(left == right)
 	case operator == "!=":
@@ -345,9 +443,79 @@ func isError(obj object.Object) bool {
 }
 
 func evalIdentifier(obj *ast.Identifier, env *object.Enviroment) object.Object {
-	val, ok := env.Get(obj.Value)
-	if !ok {
-		return newError("identifier not found: " + obj.Value)
+	if val, ok := env.Get(obj.Value); ok {
+		return val
 	}
-	return val
+
+	if builtins, ok := builtins[obj.Value]; ok {
+		return builtins
+	}
+
+	return newError("identifier not found: " + obj.Value)
+}
+
+func evalExpressions(exps []ast.Expression, env *object.Enviroment) []object.Object {
+	var result []object.Object
+
+	for _, e := range exps {
+		evaluated := Eval(e, env)
+		if isError(evaluated) {
+			return []object.Object{evaluated}
+		}
+		result = append(result, evaluated)
+	}
+
+	return result
+}
+
+func applyFunction(fn object.Object, args []object.Object) object.Object {
+
+	switch function := fn.(type) {
+	case *object.Function:
+		extendedEvn := extendFunctionEnv(function, args)
+		evaluated := Eval(function.Body, extendedEvn)
+		return unwrapReturnValue(evaluated)
+	case *object.Builtin:
+		return function.Fn(args...)
+	}
+
+	return newError("not a function: %s", fn.Type())
+}
+
+func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Enviroment {
+	env := object.NewEncloseEnviroment(fn.Env)
+
+	for paramIdx, param := range fn.Parameters {
+		env.Set(param.Value, args[paramIdx])
+	}
+	return env
+}
+
+func unwrapReturnValue(obj object.Object) object.Object {
+	if returnValue, ok := obj.(*object.ReturnValue); ok {
+		return returnValue.Value
+	}
+
+	return obj
+}
+
+func evalIndexExpression(left, index object.Object) object.Object {
+	switch {
+	case left.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
+		return evalArrayIndexExpression(left, index)
+	default:
+		return newError("index error: expect=INTEGER, got=%T", index.Inspect())
+	}
+}
+
+func evalArrayIndexExpression(arr, index object.Object) object.Object {
+	arrObj := arr.(*object.Array)
+	idex := index.(*object.Integer).Value
+	max := int64(len(arrObj.Elements) - 1)
+
+	if idex < 0 || idex > max {
+		return NULL
+	}
+
+	return arrObj.Elements[idex]
 }

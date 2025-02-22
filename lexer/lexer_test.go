@@ -31,6 +31,8 @@ func TestNextToken(t *testing.T) {
 	}
 	5 == 5;
 	5 != 6;
+
+    [1, 2];
 	`
 	tests := []struct {
 		expectedType    token.TokenType
@@ -127,6 +129,12 @@ func TestNextToken(t *testing.T) {
 		{token.NEQ, "!="},
 		{token.INT, "6"},
 		{token.SEMICOLON, ";"},
+		{token.LBRACKET, "["},
+		{token.INT, "1"},
+		{token.COMMA, ","},
+		{token.INT, "2"},
+		{token.RBRACKET, "]"},
+		{token.SEMICOLON, ";"},
 		{token.EOF, ""},
 	}
 
@@ -138,6 +146,28 @@ func TestNextToken(t *testing.T) {
 			t.Fatalf("tests[%d], expected=%q, got=%q", i, tt.expectedType, tok.Type)
 		} else if tok.Literal != tt.expectedLiteral {
 			t.Fatalf("tests[%d], expected=%q, got=%q", i, tt.expectedLiteral, tok.Literal)
+		}
+	}
+}
+
+func TestString(t *testing.T) {
+	input := `"This is a test"`
+
+	tests := []struct {
+		expectedType    token.TokenType
+		expectedLiteral string
+	}{
+		{token.STRING, "This is a test"},
+	}
+
+	l := New(input)
+	for _, test := range tests {
+		tok := l.NextToken()
+		if tok.Type != test.expectedType {
+			t.Fatalf("ExpectedType error: expect=%T, got=%T", test.expectedType, tok.Type)
+		}
+		if tok.Literal != test.expectedLiteral {
+			t.Fatalf("ExpectedLiteral error: expect=%s, got=%s", test.expectedLiteral, tok.Literal)
 		}
 	}
 }
