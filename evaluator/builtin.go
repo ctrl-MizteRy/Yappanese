@@ -2,7 +2,9 @@ package evaluator
 
 import (
 	"bufio"
+	"fmt"
 	"os"
+	"strings"
 	"yap/object"
 )
 
@@ -46,9 +48,8 @@ var builtins = map[string]*object.Builtin{
 			switch arg := args[0].(type) {
 			case *object.Array:
 				var elements []object.Object
-				copy(elements, arg.Elements)
+				elements = append(elements, arg.Elements...)
 				newArr := &object.Array{Elements: elements}
-				//THIS STILL NEED WORK!!!
 				if arr, ok := args[1].(*object.Array); ok {
 					for _, elemnt := range arr.Elements {
 						newArr.Elements = append(newArr.Elements, elemnt)
@@ -61,6 +62,18 @@ var builtins = map[string]*object.Builtin{
 			default:
 				return newError("Function does not appending of %T and %T", args[0], args[1])
 			}
+		},
+	},
+
+	"yap": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			msg := []string{}
+
+			for _, arg := range args {
+				msg = append(msg, arg.Inspect())
+			}
+			fmt.Println(strings.Join(msg, " "))
+			return nil
 		},
 	},
 }
