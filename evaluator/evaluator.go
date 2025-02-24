@@ -67,7 +67,16 @@ func Eval(node ast.Node, env *object.Enviroment) object.Object {
 		if len(elements) == 1 && isError(elements[0]) {
 			return elements[0]
 		}
+		objType := elements[0].Type()
+		for i := 1; i < len(elements); i++ {
+			if elements[i].Type() != objType {
+				return newError("Type mismatch, cannot have an array of %s and %s",
+					objType, elements[i].Type())
+			}
+		}
 		return &object.Array{Elements: elements}
+	case *ast.HashLiteral:
+		return evalHashLiteral(node, env)
 	case *ast.IndexExpression:
 		left := Eval(node.Left, env)
 		if isError(left) {
@@ -503,8 +512,10 @@ func evalIndexExpression(left, index object.Object) object.Object {
 	switch {
 	case left.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
 		return evalArrayIndexExpression(left, index)
+	case left.Type() == object.HASH_OBJ:
+		return evalHashIndexExpression(left, index)
 	default:
-		return newError("index error: expect=INTEGER, got=%T", index.Inspect())
+		return newError("Index operator not support %s", left.Type())
 	}
 }
 
@@ -518,4 +529,47 @@ func evalArrayIndexExpression(arr, index object.Object) object.Object {
 	}
 
 	return arrObj.Elements[idex]
+}
+
+func evalHashLiteral(node *ast.HashLiteral, env *object.Enviroment) object.Object {
+	pairs := make(map[object.HashKey]object.HashPair)
+
+	keys := []object.Object{}
+	for keyNode, valNode := range node.Pairs {
+		key := Eval(keyNode, env)
+		if isError(key) {
+			return key
+		}
+		keys = append(keys, key)
+		hashKey, ok := key.(object.Hashable)
+		if !ok {
+			return newError("unusable hash key %s", key.Type())
+		}
+
+		val := Eval(valNode, env)
+		if isError(val) {
+			return val
+		}
+
+		hashed := hashKey.HashKey()
+		pairs[hashed] = object.HashPair{Key: key, Value: val}
+	}
+
+	return &object.Hash{Pairs: pairs, Keys: keys}
+}
+
+func evalHashIndexExpression(hash, index object.Object) object.Object {
+	hashObj := hash.(*object.Hash)
+
+	key, ok := index.(object.Hashable)
+	if !ok {
+		return newError("unusable as hash key: %s", index.Type())
+	}
+
+	pair, ok := hashObj.Pairs[key.HashKey()]
+	if !ok {
+		return NULL
+	}
+
+	return pair.Value
 }

@@ -77,6 +77,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.INCREMENT, p.parsePrefixExpression)
 	p.registerPrefix(token.STRING, p.parseStringLiteral)
 	p.registerPrefix(token.LBRACKET, p.parseArrayLiteral)
+	p.registerPrefix(token.LBRACE, p.parseHashLiteral)
 
 	p.infixPerseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
@@ -646,77 +647,19 @@ func (p *Parser) parseExpressionList(end token.TokenType) []ast.Expression {
 	p.nextToken()
 	list = append(list, p.parseExpression(LOWEST))
 
-	defaultTok := getCurToken(list[0])
-
 	for p.peekTokenIs(token.COMMA) {
 		p.nextToken()
 		p.nextToken()
 
 		curExp := p.parseExpression(LOWEST)
-		curTok := getCurToken(curExp)
-		if defaultTok == curTok || curTok == token.LBRACKET {
-			list = append(list, curExp)
-		} else {
-			msg := fmt.Sprintf("Mismatching variable type, expect=%s, got=%s",
-				defaultTok, curTok)
-			p.errors = append(p.errors, msg)
-			return nil
-		}
+		list = append(list, curExp)
 	}
 
 	if !p.expectPeek(end) {
 		return nil
 	}
-	/*
-		if !p.peekTokenIs(token.SEMICOLON) || !p.peekTokenIs(token.COMMA) {
-			for !p.curTokenIs(token.EOF) {
-				p.nextToken()
-			}
-			return nil
-		}
-	*/
+
 	return list
-}
-
-func getCurToken(exp ast.Expression) token.TokenType {
-	switch tok := exp.(type) {
-	case *ast.IntegerLiteral:
-		return token.INT
-	case *ast.FloatLiteral:
-		return token.FLOAT
-	case *ast.StringLiteral:
-		return token.STRING
-	case *ast.ArrayLiteral:
-		if len(tok.Elements) != 0 {
-			return getCurToken(tok.Elements[0])
-		} else {
-			return token.LBRACKET
-		}
-	case *ast.Identifier:
-		return identifyToken(tok)
-	case *ast.Boolean:
-		return token.TRUE
-	default:
-		return token.ILLEGAL
-	}
-}
-
-func identifyToken(exp *ast.Identifier) token.TokenType {
-	val := exp.Value
-
-	if _, err := strconv.Atoi(val); err == nil {
-		return token.INT
-	}
-
-	if _, err := strconv.ParseFloat(val, 64); err == nil {
-		return token.FLOAT
-	}
-
-	if _, err := strconv.ParseBool(val); err == nil {
-		return token.TRUE //it doesn't matter if it's true or false since it's only for checking
-	}
-
-	return token.STRING
 }
 
 func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
@@ -730,4 +673,32 @@ func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
 	}
 
 	return exp
+}
+
+func (p *Parser) parseHashLiteral() ast.Expression {
+	hash := &ast.HashLiteral{Token: p.curToken}
+	hash.Pairs = make(map[ast.Expression]ast.Expression)
+
+	for !p.peekTokenIs(token.RBRACE) {
+		p.nextToken()
+		key := p.parseExpression(LOWEST)
+
+		if !p.expectPeek(token.COLON) {
+			return nil
+		}
+
+		p.nextToken()
+		value := p.parseExpression(LOWEST)
+		hash.Pairs[key] = value
+
+		if !p.peekTokenIs(token.RBRACE) && !p.expectPeek(token.COMMA) {
+			return nil
+		}
+	}
+
+	if !p.expectPeek(token.RBRACE) {
+		return nil
+	}
+
+	return hash
 }

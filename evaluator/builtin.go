@@ -127,4 +127,44 @@ var builtins = map[string]*object.Builtin{
 			}
 		},
 	},
+
+	"keys": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("Unexpected argument length, expect=1, got=%d", len(args))
+			}
+
+			hash, ok := args[0].(*object.Hash)
+			if !ok {
+				return newError("Unexpected argument type: expect= HASH, got= %s", args[0].Type())
+			}
+
+			keys := []object.Object{}
+			for _, key := range hash.Keys {
+				keys = append(keys, key)
+			}
+			return &object.Array{Elements: keys}
+		},
+	},
+
+	"values": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("Argument length error: expect= 1, got= %d", len(args))
+			}
+
+			hash, ok := args[0].(*object.Hash)
+			if !ok {
+				return newError("Argument type error: expect= HASH, got= %s", args[0].Type())
+			}
+
+			value := []object.Object{}
+
+			for _, val := range hash.Pairs {
+				value = append(value, val.Value)
+			}
+
+			return &object.Array{Elements: value}
+		},
+	},
 }

@@ -3,6 +3,7 @@ package object
 import (
 	"bytes"
 	"fmt"
+	"hash/fnv"
 	"strings"
 	"yap/ast"
 )
@@ -18,6 +19,7 @@ const (
 	STRING_OBJ       = "STRING"
 	BUILTIN_OBJ      = "BUILTIN"
 	ARRAY_OBJ        = "ARRAY"
+	HASH_OBJ         = "HASH"
 )
 
 type ObjectType string
@@ -41,6 +43,10 @@ func (i *Integer) Type() ObjectType {
 	return INTEGER_OBJ
 }
 
+func (i *Integer) HashKey() HashKey {
+	return HashKey{Type: i.Type(), Value: uint64(i.Value)}
+}
+
 type Boolean struct {
 	Value bool
 }
@@ -51,6 +57,18 @@ func (b *Boolean) Inspect() string {
 
 func (b *Boolean) Type() ObjectType {
 	return BOOLEAN_OBJ
+}
+
+func (b *Boolean) HashKey() HashKey {
+	var val uint64
+
+	if b.Value {
+		val = 1
+	} else {
+		val = 0
+	}
+
+	return HashKey{Type: b.Type(), Value: val}
 }
 
 type Null struct{}
@@ -73,6 +91,10 @@ func (f *Float) Inspect() string {
 
 func (f *Float) Type() ObjectType {
 	return FLOAT_OBJ
+}
+
+func (f *Float) HashKey() HashKey {
+	return HashKey{Type: f.Type(), Value: uint64(f.Value)}
 }
 
 type ReturnValue struct {
@@ -139,6 +161,13 @@ func (s *String) Inspect() string {
 	return s.Value
 }
 
+func (s *String) HashKey() HashKey {
+	h := fnv.New64a()
+	h.Write([]byte(s.Value))
+
+	return HashKey{Type: s.Type(), Value: h.Sum64()}
+}
+
 type Builtin struct {
 	Fn BuiltinFunction
 }
@@ -173,4 +202,44 @@ func (a *Array) Inspect() string {
 	msg.WriteString("]")
 
 	return msg.String()
+}
+
+type Hash struct {
+	Pairs map[HashKey]HashPair
+	Keys  []Object
+}
+
+func (h *Hash) Type() ObjectType {
+	return HASH_OBJ
+}
+
+func (h *Hash) Inspect() string {
+	var msg bytes.Buffer
+
+	pairs := []string{}
+
+	for _, pair := range h.Pairs {
+		pairs = append(pairs, fmt.Sprintf("%s: %s",
+			pair.Key.Inspect(), pair.Value.Inspect()))
+	}
+
+	msg.WriteString("{")
+	msg.WriteString(strings.Join(pairs, ", "))
+	msg.WriteString("}")
+
+	return msg.String()
+}
+
+type HashKey struct {
+	Type  ObjectType
+	Value uint64
+}
+
+type HashPair struct {
+	Key   Object
+	Value Object
+}
+
+type Hashable interface {
+	HashKey() HashKey
 }
