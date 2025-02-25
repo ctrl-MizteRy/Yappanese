@@ -1,6 +1,9 @@
 package lexer
 
-import "yap/token"
+import (
+	"strings"
+	"yap/token"
+)
 
 type Lexer struct {
 	input        string
@@ -212,9 +215,24 @@ func (l *Lexer) nextTwoChar() byte {
 
 func (l *Lexer) readString() string {
 	l.readChar()
-	start := l.position
+	str := []string{}
+	str = append(str, string(l.ch))
 	for l.ch != '"' && l.ch != 0 {
 		l.readChar()
+		if l.ch == '\\' {
+			if l.nextChar() == 't' {
+				l.readChar()
+				str = append(str, "\t")
+			} else if l.nextChar() == 'n' {
+				l.readChar()
+				str = append(str, "\n")
+			} else {
+				str = append(str, string(l.ch))
+			}
+		} else {
+			str = append(str, string(l.ch))
+		}
 	}
-	return l.input[start:l.position]
+	str = str[:len(str)-1] //removing the last "
+	return strings.Join(str, "")
 }

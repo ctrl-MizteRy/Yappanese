@@ -1,0 +1,8 @@
+yap("What's your name?:")
+propose name = scan()
+
+perhaps (len(name) == 0){
+    yap("Hello there!")
+} otherwise {
+    yap("Hello", name)
+}
