@@ -129,7 +129,17 @@ The syntax for it would be:\
 `if: perhaps`\
 `else if: perchance`\
 `else: otherwise`\
-
+\
+So if you want to write a if-else statement, it would look like this:\
+```
+perhaps (foo == nocap){
+somthing in here
+} perchance ( foo > bar) {
+something else in there
+} otherwise {
+yap("hello world")
+}
+```
 Yappanese is also support ternary expression for whoever wants to use it!
 The syntax for this will be:\
 `propose a = cap;`\
