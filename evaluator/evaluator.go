@@ -39,7 +39,12 @@ func Eval(node ast.Node, env *object.Enviroment) object.Object {
 			return args[0]
 		}
 		return applyFunction(function, args)
-
+	case *ast.ForExpression:
+		ident := node.Identifier
+		conditions := node.Conditions
+		body := node.Statements
+		forNode := &object.For{Identifer: ident, Condition: conditions, Body: body}
+		return evalForExpression(forNode, env)
 	case *ast.SayStatement:
 		val := Eval(node.Value, env)
 		if isError(val) {
@@ -57,6 +62,7 @@ func Eval(node ast.Node, env *object.Enviroment) object.Object {
 					val.Type(), node.Name.String(), env.GetType(node.Name.Value).Type())
 			}
 			env.Set(node.Name.Value, val)
+			return val
 		} else {
 			return newError("valariable %s does not exist, (perhaps not yet declare?)", node.Name.String())
 		}
@@ -572,4 +578,26 @@ func evalHashIndexExpression(hash, index object.Object) object.Object {
 	}
 
 	return pair.Value
+}
+
+func evalForExpression(forNode *object.For, env *object.Enviroment) object.Object {
+	envInner := object.NewEncloseEnviroment(env)
+	forNode.Env = envInner
+
+	if forNode.Identifer != nil {
+		Eval(forNode.Identifer, envInner)
+	}
+
+	for Eval(forNode.Condition[0], envInner) == TRUE {
+		result := Eval(forNode.Body, envInner)
+
+		if result.Type() == object.RETURN_VALUE_OBJ {
+			return result
+		}
+		if len(forNode.Condition) == 2 {
+			Eval(forNode.Condition[1], envInner)
+		}
+	}
+
+	return forNode
 }

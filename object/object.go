@@ -20,6 +20,7 @@ const (
 	BUILTIN_OBJ      = "BUILTIN"
 	ARRAY_OBJ        = "ARRAY"
 	HASH_OBJ         = "HASH"
+	FOR_OBJ          = "FOR"
 )
 
 type ObjectType string
@@ -142,6 +143,38 @@ func (f *Function) Inspect() string {
 	msg.WriteString("func")
 	msg.WriteString("(")
 	msg.WriteString(strings.Join(params, ", "))
+	msg.WriteString(") {\n")
+	msg.WriteString(f.Body.String())
+	msg.WriteString("\n}")
+
+	return msg.String()
+}
+
+type For struct {
+	Identifer *ast.SayStatement
+	Condition []ast.Expression
+	Body      *ast.BlockStatement
+	Env       *Enviroment
+}
+
+func (f *For) Type() ObjectType {
+	return FOR_OBJ
+}
+
+func (f *For) Inspect() string {
+	var msg bytes.Buffer
+
+	conditions := []string{}
+
+	for _, condi := range f.Condition {
+		conditions = append(conditions, condi.String())
+	}
+
+	msg.WriteString("for (")
+	if f.Identifer != nil {
+		msg.WriteString(f.Identifer.String() + ", ")
+	}
+	msg.WriteString(strings.Join(conditions, ", "))
 	msg.WriteString(") {\n")
 	msg.WriteString(f.Body.String())
 	msg.WriteString("\n}")

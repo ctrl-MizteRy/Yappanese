@@ -346,6 +346,70 @@ func TestArrayLiteral(t *testing.T) {
 	testIntegerObject(t, result.Elements[2], 6)
 }
 
+func TestForLoopOpperation(t *testing.T) {
+	input := `
+        propose a = 4;
+        for (propose b = 3; b <6; ++b){
+            a = a + b;
+        }
+        a;
+    `
+	eval := testEval(input)
+
+	result, ok := eval.(*object.Integer)
+	if !ok {
+		t.Fatalf("Unexpect object error: expect= object.For, got=%T", eval)
+	}
+
+	testIntegerObject(t, result, 16)
+
+}
+
+func TestForLoopReturn(t *testing.T) {
+	tests := []struct {
+		input     string
+		expectVal any
+	}{
+		{
+			`
+            for (propose a = 5; a < 10; ++a){
+                perhaps (a == 7){
+                    sayless a;
+                }
+            }
+            `,
+			7,
+		},
+		{
+			`
+            propose a = 6;
+            for (nocap){
+                ++a;
+                perhaps ( a == 10){
+                    sayless "hello";
+                }
+            }
+            `,
+			"hello",
+		},
+	}
+
+	for _, test := range tests {
+		result := testEval(test.input)
+
+		switch obj := result.(type) {
+		case *object.Integer:
+			num := int64(test.expectVal.(int))
+			testIntegerObject(t, obj, num)
+		case *object.String:
+			str := test.expectVal.(string)
+			testStringObject(t, obj, str)
+		default:
+			t.Fatalf("Unexpected object type of %T", obj)
+		}
+	}
+}
+
 func testEval(input string) object.Object {
 	l := lexer.New(input)
 	p := parser.New(l)

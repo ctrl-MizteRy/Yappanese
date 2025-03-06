@@ -25,12 +25,34 @@ func (e *Enviroment) Get(name string) (Object, bool) {
 }
 
 func (e *Enviroment) Set(name string, val Object) Object {
-	e.store[name] = val
+	_, ok := e.store[name]
+	if !ok {
+		outer := e.outer
+		if outer != nil {
+			_, ok := outer.store[name]
+			if ok {
+				outer.store[name] = val
+			} else {
+				e.store[name] = val
+			}
+		} else {
+			e.store[name] = val
+		}
+	} else {
+		e.store[name] = val
+	}
 	return val
 }
 
 func (e *Enviroment) Exist(name string) bool {
 	_, ok := e.store[name]
+	if !ok {
+		outer := e.outer
+		if outer != nil {
+			_, ok := outer.store[name]
+			return ok
+		}
+	}
 	return ok
 }
 

@@ -717,7 +717,7 @@ func (p *Parser) parseForLiteral() *ast.ForExpression {
 	for !p.curTokenIs(token.RPAREN) {
 		if p.peekTokenIs(token.LET) {
 			p.nextToken()
-			forStat.Identifier = *p.parseLetStatement()
+			forStat.Identifier = p.parseLetStatement()
 		} else {
 			if p.curTokenIs(token.LPAREN) {
 				p.nextToken()

@@ -532,7 +532,7 @@ func (h *HashLiteral) String() string {
 
 type ForExpression struct {
 	Token      token.Token
-	Identifier SayStatement
+	Identifier *SayStatement
 	Conditions []Expression
 	Statements *BlockStatement
 }
@@ -559,4 +559,13 @@ func (f *ForExpression) String() string {
 	msg.WriteString("}")
 
 	return msg.String()
+}
+
+type ForExecution struct {
+	For ForExpression
+}
+
+func (f *ForExecution) statementNode() {}
+func (f *ForExecution) String() string {
+	return f.For.String()
 }
