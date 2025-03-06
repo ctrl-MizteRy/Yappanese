@@ -1,0 +1,47 @@
+func getQuestion(){
+    propose left = rand(11);
+    propose right = rand(10) + 1 ;
+    propose operator = rand(4);
+
+    perhaps (operator == 0){
+        yap(left, "+", right, "=", "\n");
+        sayless left + right;
+    } perchance (operator == 1){
+        yap(left, "-", right, "=", "\n");
+        sayless left - right;
+    } perchance (operator == 2){
+        yap(left, "*", right, "=", "\n");
+        sayless left * right;
+    } otherwise {
+        yap(left, "/", right, "=", "\n");
+        sayless left / right;
+    }
+}
+func generateQuestion(number){
+    propose ans;
+    propose ques;
+    propose ansStr;
+    propose correctAns = 0;
+    for (propose i = 0; i < number; ++i){
+        yap("Question " + i + ": ");
+        ques = getQuestion();
+        ansStr = scan();
+        ans = int(ansStr);
+        perhaps (ques == ans){
+            yap("Correct!", "\n");
+            ++correctAns;
+        } otherwise {
+            yap("Wrong, it's", ques, "\n");
+        }
+    }
+    sayless correctAns;
+}
+
+yap("How many question?", "\n");
+propose numStr = scan();
+propose num = int(numStr);
+propose total = generateQuestion(num)
+yap("You got:", total, "out of", num, "correct!", "\n")
+yap("Good work!!", "\n")
+
+

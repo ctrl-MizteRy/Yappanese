@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"yap/object"
 )
@@ -179,7 +180,7 @@ var builtins = map[string]*object.Builtin{
 	"rand": &object.Builtin{
 		Fn: func(args ...object.Object) object.Object {
 			if len(args) != 1 {
-				return newError("Argument length error: cannot take more than 2 arguements")
+				return newError("Argument length error: expect=1, got=%d", len(args))
 			}
 			switch num := args[0].(type) {
 			case *object.Integer:
@@ -191,6 +192,29 @@ var builtins = map[string]*object.Builtin{
 				return &object.Float{Value: ranFloat}
 			default:
 				return newError("Argument type error: expect Int or Float, got %s", args[0].Type())
+			}
+		},
+	},
+	"int": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("Argument length error: expect=1, got=%d", len(args))
+			}
+			switch obj := args[0].(type) {
+			case *object.Integer:
+				return obj
+			case *object.Float:
+				val := obj.Value
+				return &object.Integer{Value: int64(val)}
+			case *object.String:
+				val := obj.Value
+				num, err := strconv.Atoi(val)
+				if err != nil {
+					return newError("Cannot convert %s into an Int", val)
+				}
+				return &object.Integer{Value: int64(num)}
+			default:
+				return newError("Cannot convert %s into an Int", obj.Type())
 			}
 		},
 	},
