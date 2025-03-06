@@ -44,7 +44,11 @@ func Eval(node ast.Node, env *object.Enviroment) object.Object {
 		conditions := node.Conditions
 		body := node.Statements
 		forNode := &object.For{Identifer: ident, Condition: conditions, Body: body}
-		return evalForExpression(forNode, env)
+		returnNode := evalForExpression(forNode, env)
+		if returnNode.Type() == object.FOR_OBJ {
+			return nil
+		}
+		return returnNode
 	case *ast.SayStatement:
 		val := Eval(node.Value, env)
 		if isError(val) {
@@ -281,16 +285,22 @@ func evalStringInfixExpression(left object.Object, operator string,
 	case "*":
 		num, err := strconv.Atoi(lVal)
 		if err == nil {
+			if num == 0 {
+				return &object.String{Value: ""}
+			}
 			str := rVal
-			for i := 0; i < num; i++ {
+			for i := 1; i < num; i++ {
 				str += str
 			}
 			return &object.String{Value: str}
 		}
 		num, err = strconv.Atoi(rVal)
 		if err == nil {
+			if num == 0 {
+				return &object.String{Value: ""}
+			}
 			str := lVal
-			for i := 0; i < num; i++ {
+			for i := 1; i < num; i++ {
 				str += lVal
 			}
 			return &object.String{Value: str}
@@ -591,7 +601,7 @@ func evalForExpression(forNode *object.For, env *object.Enviroment) object.Objec
 	for Eval(forNode.Condition[0], envInner) == TRUE {
 		result := Eval(forNode.Body, envInner)
 
-		if result.Type() == object.RETURN_VALUE_OBJ {
+		if result != nil && result.Type() == object.RETURN_VALUE_OBJ {
 			return result
 		}
 		if len(forNode.Condition) == 2 {

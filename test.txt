@@ -1,8 +1,8 @@
-yap("What's your name?:")
-propose name = scan()
+propose start = "*";
+propose space = " ";
 
-perhaps (len(name) == 0){
-    yap("Hello there!")
-} otherwise {
-    yap("Hello", name)
+for (propose i = 1; i < 6; ++i){
+    yap(space * (5-i))
+    yap(start * ((2*i) - 1))
+    yap("\n")
 }

@@ -82,9 +82,16 @@ var builtins = map[string]*object.Builtin{
 			msg := []string{}
 
 			for _, arg := range args {
-				msg = append(msg, arg.Inspect())
+				switch arg.Inspect() {
+				case "\\t":
+					msg = append(msg, "\t")
+				case "\\n":
+					msg = append(msg, "\n")
+				default:
+					msg = append(msg, arg.Inspect())
+				}
 			}
-			fmt.Println(strings.Join(msg, " "))
+			fmt.Print(strings.Join(msg, " "))
 			return nil
 		},
 	},
