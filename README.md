@@ -192,3 +192,5 @@ Syntax:\
 I mean this is just a fun project that I write to learn Go and also how interpreter work.
 If you want to do PR, I would not stop you but please also adding the proper testing file.
 
+## Goals
+The main goal for this moment to to write a complier for Yappanese.
