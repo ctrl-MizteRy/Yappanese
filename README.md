@@ -3,7 +3,6 @@
 Yappanese is a language interpreter using golang as its base language. The project is inspired by the "Writing an Interpreter In Go" book written by Thorsten Ball.
 I used the book at the based for my Yappanese interpreter and adding more variables and functions that I often use while coding.
 This is not quite a complete interpreter since there are still many things that I want to implement into it
-Yappanese interpreter will read the file from top to bottom so unless you had not already declare your variables or function, it will give you an error.
 
 ## Requirement
 You will need to have [golang](https://go.dev/doc/install) install in your machine.
