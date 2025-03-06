@@ -529,3 +529,34 @@ func (h *HashLiteral) String() string {
 
 	return msg.String()
 }
+
+type ForExpression struct {
+	Token      token.Token
+	Identifier SayStatement
+	Conditions []Expression
+	Statements *BlockStatement
+}
+
+func (f *ForExpression) statementNode() {}
+func (f *ForExpression) TokenLiteral() string {
+	return f.Token.Literal
+}
+
+func (f *ForExpression) String() string {
+	var msg bytes.Buffer
+	condis := []string{}
+
+	for _, condi := range f.Conditions {
+		condis = append(condis, condi.String())
+	}
+
+	msg.WriteString("for")
+	msg.WriteString("(")
+	msg.WriteString(strings.Join(condis, ", "))
+	msg.WriteString(")")
+	msg.WriteString("{")
+	msg.WriteString(f.Statements.String())
+	msg.WriteString("}")
+
+	return msg.String()
+}

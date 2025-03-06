@@ -150,6 +150,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseReturnStatement()
 	case p.curToken.Type == token.IDENT && p.peekTokenIs(token.ASSIGN):
 		return p.parseIdentStatement()
+	case p.curToken.Type == token.FOR:
+		return p.parseForLiteral()
 	default:
 		return p.parseExpressionstatement()
 	}
@@ -701,4 +703,44 @@ func (p *Parser) parseHashLiteral() ast.Expression {
 	}
 
 	return hash
+}
+
+func (p *Parser) parseForLiteral() *ast.ForExpression {
+	forStat := &ast.ForExpression{Token: p.curToken}
+
+	if !p.expectPeek(token.LPAREN) {
+		msg := fmt.Sprintf("Expecting \"(\", got %s", p.curToken.Literal)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+
+	for !p.curTokenIs(token.RPAREN) {
+		if p.peekTokenIs(token.LET) {
+			p.nextToken()
+			forStat.Identifier = *p.parseLetStatement()
+		} else {
+			if p.curTokenIs(token.LPAREN) {
+				p.nextToken()
+			}
+			forStat.Conditions = append(forStat.Conditions, p.parseExpression(LOWEST))
+			p.nextToken()
+		}
+		if p.curTokenIs(token.SEMICOLON) {
+			p.nextToken()
+		} else if !p.curTokenIs(token.RPAREN) {
+			msg := fmt.Sprintf("Expected \")\" got %s", p.curToken.Literal)
+			p.errors = append(p.errors, msg)
+		}
+	}
+	p.nextToken()
+
+	if !p.curTokenIs(token.LBRACE) {
+		msg := fmt.Sprintf("Expected \"{\", got %s", p.curToken.Literal)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+
+	forStat.Statements = p.parseBlockStatement()
+
+	return forStat
 }

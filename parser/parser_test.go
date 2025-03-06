@@ -681,6 +681,77 @@ func TestFunctionParameterParsing(t *testing.T) {
 	}
 }
 
+func TestForExpression(t *testing.T) {
+	tests := []struct {
+		input         string
+		condition_len int
+		BSTlen        int
+	}{
+		{
+			`
+            for (propose a = 3; a < 5; ++a){
+                b = b + a;
+            }
+            `,
+			2,
+			1,
+		},
+		{
+			`
+            for (a < 5){
+                ++a;
+            }
+            `,
+			1,
+			1,
+		},
+		{
+			`
+            for (true){
+                propose a = [1,2,3,4];
+                b = b + a[3];
+                a = append(a, b);
+            }
+            `,
+			1,
+			3,
+		},
+		{
+			`
+            for (a < 5; ++a){}
+            `,
+			2,
+			0,
+		},
+	}
+
+	for _, test := range tests {
+
+		l := lexer.New(test.input)
+		p := New(l)
+		program := p.ParserProgram()
+		checkParserError(t, p)
+
+		if len(program.Statements) != 1 {
+			t.Fatalf("Statement length error, expect=1, got=%d", len(program.Statements))
+		}
+
+		exp, ok := program.Statements[0].(*ast.ForExpression)
+		if !ok {
+			t.Fatalf("Expression error: expect= ast.Expression, got=%T", program.Statements[0])
+		}
+
+		if len(exp.Conditions) != test.condition_len {
+			t.Fatalf("Condition length error: expect=3, got= %d", len(exp.Conditions))
+		}
+
+		if len(exp.Statements.Statements) != test.BSTlen {
+			t.Fatalf("Block Expression lenght error: expect=1, got=%d", len(exp.Statements.Statements))
+		}
+
+	}
+}
+
 func TestCallExpression(t *testing.T) {
 	input := "add(1, 2 + 3, 4 * 5)"
 	l := lexer.New(input)

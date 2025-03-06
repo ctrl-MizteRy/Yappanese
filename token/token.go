@@ -54,6 +54,7 @@ const (
 	ELIF     = "ELIF"
 	RETURN   = "RETURN"
 	GLOBAL   = "GLOBAL"
+	FOR      = "FOR"
 )
 
 var keywords = map[string]TokenType{
@@ -70,6 +71,7 @@ var keywords = map[string]TokenType{
 	"ackchyually": CONST,
 	"worldwide":   GLOBAL,
 	".":           FLOAT,
+	"for":         FOR,
 }
 
 func LookupIdent(indent string) TokenType {
