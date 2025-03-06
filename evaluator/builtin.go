@@ -3,6 +3,7 @@ package evaluator
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"os"
 	"reflect"
 	"strings"
@@ -172,6 +173,25 @@ var builtins = map[string]*object.Builtin{
 			}
 
 			return &object.Array{Elements: value}
+		},
+	},
+
+	"rand": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("Argument length error: cannot take more than 2 arguements")
+			}
+			switch num := args[0].(type) {
+			case *object.Integer:
+				val := num.Value
+				return &object.Integer{Value: int64(rand.Intn(int(val)))}
+			case *object.Float:
+				val := num.Value
+				ranFloat := rand.Float64() * val
+				return &object.Float{Value: ranFloat}
+			default:
+				return newError("Argument type error: expect Int or Float, got %s", args[0].Type())
+			}
 		},
 	},
 }
