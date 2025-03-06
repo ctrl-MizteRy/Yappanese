@@ -36,54 +36,40 @@ go run .
 
 In Yappanese, you will be using the word `propose` to declare a variable.\
 `propose a = 10;`\
-You can also declare a null variable for later assign.\
-`propose a;`\
-`a = 10; #this is okay since a is already been declare`\
-`a = "hello" # this will raise an error since a is now an integer obj and cannot be redeclare as a string obj`\
+You can also declare a null variable for later assign.
+```
+propose a;
+a = 10; #this is okay since a is already been declare
+a = "hello" # this will raise an error since a is now an integer obj and cannot be redeclare as a string obj
+```
 
 ## Variables
 Currently, Yappanese has **int64**, **float64**, **boolean**, **array**, and **hashmap**
 
 ### Int
 You can basic do any simple arithmetic with Yappanese int var \
-`
+```
 prosose a = 4;
-` \
-`
 a = a + 5 # a will be 9
-`\
-`
-a = a - 5 # a will be -1
-`\
-`
-a = a * 3 # a will be 12
-`\
-`
+a = a - 5 # a will be 4
+a = a * 3 # a will be 16
 a = a / 0 # this will raise an error, because you know why
-`\
-There is also the power and modulo:\
-`a**2 = 16`\
-`a%2 = 0`
+
+# There is also the power and modulo:
+a**2 = 32
+a%2 = 0
+```
 
 ### Float
 Float will have the same arithmetic like int; however, if you do any arithmetic between int and float, the result will automatically convert into a float.
-\
-`
+```
 propose a = 4;
 propose b = 1.0;
-`\
-`
 a = a + b # a = 5.0
-`\
-`
-a = a - b # a = 3.0
-`\
-`
+a = a - b # a = 4.0
 a = a * b # a = 4.0
-`\
-`
 a = a / b # a = 4.0
-`\
+```
 Power and Modulo will be working the same in Float just as in Int;
 
 ### Boolean
@@ -191,6 +177,17 @@ Syntax:\
 
 ### Values
 Similar to keys, this function will return the value of each hashmap in the form of an array
+
+### Int
+The int function will convert any value of string or float into int.
+If a string val is not an int, the program will raise an error.
+For float, it will truncate the val of the float var.
+Syntax:
+```
+propose a = int(6.7) # a = 6 and a will be type int
+propose b = int("7") # b = 7
+propose c = int("hello") # This will raise an error
+```
 
 ### Yap
 Last builtin function for Yappanese is of course yap, this is pretty much a printf function like in C.
